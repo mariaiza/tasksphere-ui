@@ -1,0 +1,5 @@
+services:
+  tasksphere-ui:
+    build: .
+    ports:
+      - "3000:80"
