@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createTask, getTasks, updateTask, updateTaskStatus } from '../services/api'
-import { LogOut, Plus, Loader2, ClipboardList, Pencil, X, Check } from 'lucide-react'
+import { createTask, getTasks, updateTask, updateTaskStatus, deleteTask } from '../services/api'
+import { LogOut, Plus, Loader2, ClipboardList, Pencil, X, Check, Trash2 } from 'lucide-react'
 
 const STATUS_CYCLE = ['todo', 'in_progress', 'completed']
 
@@ -121,6 +121,17 @@ function TasksPage() {
       setEditError('Failed to save changes.')
     } finally {
       setEditLoading(false)
+    }
+  }
+
+  const handleDelete = async (task) => {
+    if (!window.confirm(`Delete "${task.title}"?`)) return
+    try {
+      await deleteTask(task.id)
+      setTasks((prev) => prev.filter((t) => t.id !== task.id))
+      showConfirmation('Task deleted.')
+    } catch {
+      showConfirmation('Failed to delete task.')
     }
   }
 
@@ -304,6 +315,14 @@ function TasksPage() {
                         title="Edit task"
                       >
                         <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(task)}
+                        className="shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                        title="Delete task"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   )}
