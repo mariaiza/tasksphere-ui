@@ -1,11 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createTask, getTasks } from '../services/api'
-import { LogOut, Plus, Loader2 } from 'lucide-react'
+import { LogOut, Plus, Loader2, ClipboardList } from 'lucide-react'
+
+const STATUS_BADGE = {
+  todo:        'bg-gray-100 text-gray-600',
+  in_progress: 'bg-blue-100 text-blue-700',
+  completed:   'bg-emerald-100 text-emerald-700',
+}
+
+const STATUS_LABEL = {
+  todo:        'To Do',
+  in_progress: 'In Progress',
+  completed:   'Completed',
+}
 
 function TasksPage() {
   const navigate = useNavigate()
   const [tasks, setTasks] = useState([])
+  const [tasksLoading, setTasksLoading] = useState(true)
   const [form, setForm] = useState({ title: '', description: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -19,6 +32,7 @@ function TasksPage() {
     getTasks()
       .then((res) => setTasks(res.data?.results ?? res.data ?? []))
       .catch(() => setTasks([]))
+      .finally(() => setTasksLoading(false))
   }, [navigate])
 
   const handleChange = (e) => {
@@ -141,17 +155,34 @@ function TasksPage() {
 
         {/* Task List */}
         <div>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">My Tasks</h2>
-          {tasks.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No tasks yet. Create one above.</p>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            My Tasks {!tasksLoading && <span className="text-gray-400 font-normal normal-case">({tasks.length})</span>}
+          </h2>
+
+          {tasksLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            </div>
+          ) : tasks.length === 0 ? (
+            <div className="text-center py-12">
+              <ClipboardList className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-400">No tasks yet. Create one above.</p>
+            </div>
           ) : (
             <ul className="space-y-2">
               {tasks.map((task) => (
-                <li key={task.id} className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-                  <p className="text-sm font-medium text-gray-800">{task.title}</p>
-                  {task.description && (
-                    <p className="text-sm text-gray-500 mt-1">{task.description}</p>
-                  )}
+                <li key={task.id} className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                      {task.title}
+                    </p>
+                    {task.description && (
+                      <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                    )}
+                  </div>
+                  <span className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full ${STATUS_BADGE[task.status] ?? STATUS_BADGE.todo}`}>
+                    {STATUS_LABEL[task.status] ?? task.status}
+                  </span>
                 </li>
               ))}
             </ul>
