@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createTask, getTasks, updateTaskStatus } from '../services/api'
-import { LogOut, Plus, Loader2, ClipboardList } from 'lucide-react'
+import { createTask, getTasks, updateTask, updateTaskStatus } from '../services/api'
+import { LogOut, Plus, Loader2, ClipboardList, Pencil, X, Check } from 'lucide-react'
 
 const STATUS_CYCLE = ['todo', 'in_progress', 'completed']
 
@@ -32,6 +32,12 @@ function TasksPage() {
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [confirmation, setConfirmation] = useState('')
+
+  // Edit state
+  const [editId, setEditId] = useState(null)
+  const [editForm, setEditForm] = useState({ title: '', description: '' })
+  const [editError, setEditError] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -87,6 +93,34 @@ function TasksPage() {
       await updateTaskStatus(task.id, nextStatus)
     } catch {
       setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: task.status } : t))
+    }
+  }
+
+  const handleEditOpen = (task) => {
+    setEditId(task.id)
+    setEditForm({ title: task.title, description: task.description ?? '' })
+    setEditError('')
+  }
+
+  const handleEditCancel = () => {
+    setEditId(null)
+    setEditError('')
+  }
+
+  const handleEditSave = async (taskId) => {
+    if (!editForm.title.trim()) {
+      setEditError('Title is required.')
+      return
+    }
+    setEditLoading(true)
+    try {
+      const res = await updateTask(taskId, { title: editForm.title.trim(), description: editForm.description.trim() })
+      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, ...res.data } : t))
+      setEditId(null)
+    } catch {
+      setEditError('Failed to save changes.')
+    } finally {
+      setEditLoading(false)
     }
   }
 
@@ -203,26 +237,76 @@ function TasksPage() {
           ) : (
             <ul className="space-y-2">
               {tasks.map((task) => (
-                <li key={task.id} className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-start gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleStatus(task)}
-                    title="Click to cycle status"
-                    className="shrink-0 text-lg hover:scale-110 transition-transform mt-0.5"
-                  >
-                    {STATUS_EMOJI[task.status] ?? '⬜'}
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                      {task.title}
-                    </p>
-                    {task.description && (
-                      <p className="text-sm text-gray-500 mt-1">{task.description}</p>
-                    )}
-                  </div>
-                  <span className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full ${STATUS_BADGE[task.status] ?? STATUS_BADGE.todo}`}>
-                    {STATUS_LABEL[task.status] ?? task.status}
-                  </span>
+                <li key={task.id} className="bg-white border border-gray-200 rounded-lg px-4 py-3">
+                  {editId === task.id ? (
+                    /* Inline edit form */
+                    <div className="space-y-3">
+                      {editError && (
+                        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">{editError}</p>
+                      )}
+                      <input
+                        type="text"
+                        value={editForm.title}
+                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                        className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <textarea
+                        value={editForm.description}
+                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                        rows={2}
+                        className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                        placeholder="Description (optional)"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditSave(task.id)}
+                          disabled={editLoading}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 disabled:opacity-60"
+                        >
+                          {editLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          Save
+                        </button>
+                        <button
+                          onClick={handleEditCancel}
+                          className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-gray-600 text-xs rounded hover:bg-gray-50"
+                        >
+                          <X className="w-3 h-3" />
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Normal task row */
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(task)}
+                        title="Click to cycle status"
+                        className="shrink-0 text-lg hover:scale-110 transition-transform mt-0.5"
+                      >
+                        {STATUS_EMOJI[task.status] ?? '⬜'}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                          {task.title}
+                        </p>
+                        {task.description && (
+                          <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                        )}
+                      </div>
+                      <span className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full ${STATUS_BADGE[task.status] ?? STATUS_BADGE.todo}`}>
+                        {STATUS_LABEL[task.status] ?? task.status}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleEditOpen(task)}
+                        className="shrink-0 text-gray-400 hover:text-emerald-600 transition-colors"
+                        title="Edit task"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
