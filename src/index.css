@@ -1,3 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 25% 97%;
+    --foreground: 20 10% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 10% 15%;
+
+    --primary: 14 60% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 20% 92%;
+    --secondary-foreground: 20 10% 25%;
+
+    --muted: 30 15% 94%;
+    --muted-foreground: 20 8% 50%;
+
+    --accent: 150 25% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 150 45% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 30 15% 88%;
+    --input: 30 15% 88%;
+    --ring: 14 60% 55%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .task-checkbox {
+    @apply w-5 h-5 rounded-full border-2 border-muted-foreground/40
+           transition-all duration-200 cursor-pointer
+           hover:border-primary hover:scale-110;
+  }
+  .task-checkbox-checked {
+    @apply bg-success border-success scale-100;
+  }
+}
