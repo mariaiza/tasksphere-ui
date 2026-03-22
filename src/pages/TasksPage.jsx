@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createTask, getTasks } from '../services/api'
+import { createTask, getTasks, updateTaskStatus } from '../services/api'
 import { LogOut, Plus, Loader2, ClipboardList } from 'lucide-react'
+
+const STATUS_CYCLE = ['todo', 'in_progress', 'completed']
 
 const STATUS_BADGE = {
   todo:        'bg-gray-100 text-gray-600',
@@ -15,6 +17,12 @@ const STATUS_LABEL = {
   completed:   'Completed',
 }
 
+const STATUS_EMOJI = {
+  todo:        '⬜',
+  in_progress: '⏳',
+  completed:   '✅',
+}
+
 function TasksPage() {
   const navigate = useNavigate()
   const [tasks, setTasks] = useState([])
@@ -23,6 +31,7 @@ function TasksPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [confirmation, setConfirmation] = useState('')
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -34,6 +43,11 @@ function TasksPage() {
       .catch(() => setTasks([]))
       .finally(() => setTasksLoading(false))
   }, [navigate])
+
+  const showConfirmation = (msg) => {
+    setConfirmation(msg)
+    setTimeout(() => setConfirmation(''), 2500)
+  }
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -52,6 +66,7 @@ function TasksPage() {
       setTasks((prev) => [res.data, ...prev])
       setForm({ title: '', description: '' })
       setShowForm(false)
+      showConfirmation('Task created.')
     } catch (err) {
       const data = err.response?.data
       if (data && typeof data === 'object') {
@@ -62,6 +77,16 @@ function TasksPage() {
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToggleStatus = async (task) => {
+    const nextStatus = STATUS_CYCLE[(STATUS_CYCLE.indexOf(task.status) + 1) % STATUS_CYCLE.length]
+    setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: nextStatus } : t))
+    try {
+      await updateTaskStatus(task.id, nextStatus)
+    } catch {
+      setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: task.status } : t))
     }
   }
 
@@ -87,6 +112,13 @@ function TasksPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+        {/* Confirmation toast */}
+        {confirmation && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded px-4 py-2">
+            {confirmation}
+          </div>
+        )}
+
         {/* New Task Button / Form */}
         {!showForm ? (
           <button
@@ -171,8 +203,16 @@ function TasksPage() {
           ) : (
             <ul className="space-y-2">
               {tasks.map((task) => (
-                <li key={task.id} className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+                <li key={task.id} className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-start gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleStatus(task)}
+                    title="Click to cycle status"
+                    className="shrink-0 text-lg hover:scale-110 transition-transform mt-0.5"
+                  >
+                    {STATUS_EMOJI[task.status] ?? '⬜'}
+                  </button>
+                  <div className="min-w-0 flex-1">
                     <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                       {task.title}
                     </p>
